@@ -31,12 +31,7 @@ for (const folder of commandFolders) {
 // client.player = createAudioPlayer();
 // client.playList = [];
 
-client.player = new Player(client, {
-  ytdlOptions: {
-    quality: "highestaudio",
-    highWaterMark: 1 << 25,
-  },
-});
+client.player = new Player(client);
 client.player.extractors.register(YouTubeExtractor);
 
 client.once(Events.ClientReady, () => {
