@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, userMention } = require("discord.js");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, userMention, EmbedBuilder } = require("discord.js");
 
 const { messageBuilder } = require("../../embed");
 const { QueryType, useMainPlayer } = require("discord-player");
@@ -23,24 +23,6 @@ module.exports = {
 
     let song = result.tracks[0];
 
-    const mymy = new Map();
-
-    //PLAY COMMAND
-    // if (options === 'play') {
-    //  (...)
-    //  interaction.editReply({embeds: [PlayEmbed]})
-    //  mymy.set(interaction.member.id, [interaction.channel.id, interaction.fetchReply().id])
-    // }
-
-    // //STOP COMMAND
-    // if (options === 'stop') {
-    //  (...)
-    //  let channel = client.channels.cache.get(mymy[interaction.member.id].0);
-    //  // Fetch the messages before we can access any of them
-    //  channel.messages.fetch();
-    //  channel.messages.cache.get(mymy[interaction.member.id].1).edit({embeds: [EndEmbed]})
-    // }
-
     try {
       if (!queue.isPlaying()) {
         const entry = queue.tasksQueue.acquire();
@@ -53,9 +35,8 @@ module.exports = {
           { name: "대기 곡", value: queue.tracks.toArray().length - 1 + "곡", inline: true },
         ]);
 
-        queue.node.setVolume(100);
         await queue.node.play();
-        await interaction.editReply({ embeds: [replyMessage] });
+        await interaction.reply({ embeds: [replyMessage] });
       } else {
         let current = queue.currentTrack;
         let replyMessage = messageBuilder(
@@ -73,7 +54,14 @@ module.exports = {
         );
 
         queue.insertTrack(song);
-        await interaction.edit({ embeds: [replyMessage] });
+
+        await client.channels.cache.get(interaction.channelId).messages.fetch({ limit: 1 }).then(async message => {
+          // new reply & previous embed message edit
+          message.first().edit({ embeds: [replyMessage] });
+        });
+        
+
+
       }
     } catch (error) {
       console.log(error);
