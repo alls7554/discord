@@ -1,7 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { Client, Collection, Events, GatewayIntentBits } = require("discord.js");
-const { createAudioPlayer } = require("@discordjs/voice");
 const { token } = require("./config.json");
 const { Player } = require("discord-player");
 const { YouTubeExtractor } = require("@discord-player/extractor");
@@ -28,8 +27,7 @@ for (const folder of commandFolders) {
   }
 }
 
-// client.player = createAudioPlayer();
-// client.playList = [];
+const musicPlayer = new Map();
 
 client.player = new Player(client);
 client.player.extractors.register(YouTubeExtractor);
@@ -46,7 +44,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (!command) return;
 
   try {
-    await command.execute({ client, interaction });
+    await command.execute({ musicPlayer, client, interaction });
   } catch (error) {
     console.error(error);
     if (interaction.replied || interaction.deferred) {

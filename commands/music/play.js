@@ -1,16 +1,25 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, userMention, EmbedBuilder } = require("discord.js");
+const {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  SlashCommandBuilder,
+  userMention,
+  EmbedBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+} = require("discord.js");
 
 const { messageBuilder } = require("../../embed");
 const { QueryType, useMainPlayer } = require("discord-player");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("노래")
-    .setDescription("Insert Only Youtube URL")
+    .setName("play")
+    .setDescription("유튜브 주소를 넣어주세요.")
     .addStringOption((option) =>
       option.setName("search").setDescription("유튜브 주소를 넣어주세요.").setRequired(true)
     ),
-  async execute({ client, interaction }) {
+  async execute({ musicPlayer, client, interaction }) {
     const player = useMainPlayer();
     const queue = player.nodes.create(interaction.guildId);
 
@@ -27,19 +36,34 @@ module.exports = {
       if (!queue.isPlaying()) {
         const entry = queue.tasksQueue.acquire();
         await entry.getTask();
+
         queue.addTrack(song);
+
+        await queue.node.play();
+
+        const select = new StringSelectMenuBuilder()
+          .setCustomId("queue")
+          .setPlaceholder("다음곡 : 다음 곡이 존재하지 않습니다.")
+          .addOptions(
+            new StringSelectMenuOptionBuilder().setLabel("등록된 다음곡이 존재하지 않습니다.").setValue("noting")
+          );
+        const selectRow = new ActionRowBuilder().addComponents(select);
+
         let replyMessage = messageBuilder("#ffffff", song.title, song.url, "Now Playing...🎶", song.thumbnail, [
           { name: "노래 길이", value: song.duration, inline: true },
           { name: "볼륨", value: queue.node.volume.toString(), inline: true },
           { name: "요청자", value: userMention(interaction.user.id), inline: true },
-          { name: "대기 곡", value: queue.tracks.toArray().length - 1 + "곡", inline: true },
+          { name: "대기 곡", value: queue.tracks.toArray().length + "곡", inline: true },
         ]);
 
-        await queue.node.play();
-        await interaction.reply({ embeds: [replyMessage] });
+        const mesg = await interaction.reply({ embeds: [replyMessage], components: [selectRow] });
+        musicPlayer.set(0, mesg);
       } else {
+        queue.insertTrack(song);
+
         let current = queue.currentTrack;
-        let replyMessage = messageBuilder(
+
+        let editReplyMessage = messageBuilder(
           "#ffffff",
           current.title,
           current.url,
@@ -49,19 +73,33 @@ module.exports = {
             { name: "노래 길이", value: current.duration, inline: true },
             { name: "볼륨", value: queue.node.volume.toString(), inline: true },
             { name: "요청자", value: userMention(current.requestedBy.id), inline: true },
-            { name: "대기 곡", value: queue.tracks.toArray().length - 1 + "곡", inline: true },
+            { name: "대기 곡", value: queue.tracks.toArray().length + "곡", inline: true },
           ]
         );
 
-        queue.insertTrack(song);
+        let select = new StringSelectMenuBuilder()
+          .setCustomId("queue")
+          .setPlaceholder("다음곡 : " + queue.tracks.toArray()[0].title)
+          .addOptions(
+            queue.tracks.toArray().map((track) => {
+              new StringSelectMenuOptionBuilder()
+                .setLabel(track.title)
+                .setDescription(track.duration + " | " + track.author)
+                .setValue("noting");
+            })
+          );
+        const selectRow = new ActionRowBuilder().addComponents(select);
 
-        await client.channels.cache.get(interaction.channelId).messages.fetch({ limit: 1 }).then(async message => {
-          // new reply & previous embed message edit
-          message.first().edit({ embeds: [replyMessage] });
+        musicPlayer.get(0).edit({ embeds: [editReplyMessage], components: [selectRow] });
+
+        const mesg = await interaction.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor("#ffffff")
+              .setDescription(song.title + "를 대기열에 추가했어요.")
+              .setTimestamp(),
+          ],
         });
-        
-
-
       }
     } catch (error) {
       console.log(error);
