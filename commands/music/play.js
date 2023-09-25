@@ -8,7 +8,7 @@ const {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } = require("discord.js");
-
+const fs = require('node:fs')
 const { messageBuilder } = require("../../embed");
 const { QueryType, useMainPlayer } = require("discord-player");
 
@@ -41,6 +41,9 @@ module.exports = {
 
         await queue.node.play();
 
+        const json = await fs.promises.readFile('setting.json', 'utf-8');
+        queue.node.setVolume(Math.min(JSON.parse(json).volume, 100));
+
         const select = new StringSelectMenuBuilder()
           .setCustomId("queue")
           .setPlaceholder("다음곡 : 다음 곡이 존재하지 않습니다.")
@@ -56,7 +59,8 @@ module.exports = {
           { name: "대기 곡", value: queue.tracks.toArray().length + "곡", inline: true },
         ]);
 
-        const mesg = await interaction.reply({ embeds: [replyMessage], components: [selectRow] });
+        // , components: [selectRow]
+        const mesg = await interaction.reply({ embeds: [replyMessage] });
         musicPlayer.set(0, mesg);
       } else {
         queue.insertTrack(song);
@@ -77,22 +81,24 @@ module.exports = {
           ]
         );
 
-        let select = new StringSelectMenuBuilder()
-          .setCustomId("queue")
-          .setPlaceholder("다음곡 : " + queue.tracks.toArray()[0].title)
-          .addOptions(
-            queue.tracks.toArray().map((track) => {
-              new StringSelectMenuOptionBuilder()
-                .setLabel(track.title)
-                .setDescription(track.duration + " | " + track.author)
-                .setValue("noting");
-            })
-          );
-        const selectRow = new ActionRowBuilder().addComponents(select);
+        // let select = new StringSelectMenuBuilder()
+        //   .setCustomId("queue")
+        //   .setPlaceholder("다음곡 : " + queue.tracks.toArray()[0].title)
+        //   .addOptions(
+        //     queue.tracks.toArray().map((track) => {
+        //       new StringSelectMenuOptionBuilder()
+        //         .setLabel(track.title)
+        //         .setDescription(track.duration + " | " + track.author)
+        //         .setValue("noting");
+        //     })
+        //   );
+        // const selectRow = new ActionRowBuilder().addComponents(select);
 
-        musicPlayer.get(0).edit({ embeds: [editReplyMessage], components: [selectRow] });
+        // , components: [selectRow]
 
-        const mesg = await interaction.reply({
+        musicPlayer.get(0).edit({ embeds: [editReplyMessage] });
+
+        await interaction.reply({
           embeds: [
             new EmbedBuilder()
               .setColor("#ffffff")
